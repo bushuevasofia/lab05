@@ -20,7 +20,6 @@ public:
 };
 
 // Тесты для Account 
-//Проверяет поведение Lock() и Unlock(): Два вызова Lock(), oдин вызов Unlock()
 
 TEST(AccountTest, LockUnlockBehaviour) {
     MockAccount acc(0, 1000);
@@ -33,9 +32,6 @@ TEST(AccountTest, LockUnlockBehaviour) {
     acc.Unlock();
 }
 
-
-//Проверка начального баланса и изменения при блокировке
-
 TEST(AccountTest, BalanceModificationWithLock) {
     Account acc(0, 1000);
 
@@ -47,13 +43,10 @@ TEST(AccountTest, BalanceModificationWithLock) {
     EXPECT_EQ(acc.GetBalance(), 1100);
 }
 
-
-//Проверка, что изменение баланса без Lock приводит к исключению
-
 TEST(AccountTest, ChangeBalanceWithoutLockThrows) {
     Account acc(0, 1000);
 
-    EXPECT_THROW(acc.ChangeBalance(100), std::runtime_error);  // Без Lock — исключение
+    EXPECT_THROW(acc.ChangeBalance(100), std::runtime_error);  
 
     acc.Lock();
     EXPECT_NO_THROW(acc.ChangeBalance(100));  
@@ -61,18 +54,14 @@ TEST(AccountTest, ChangeBalanceWithoutLockThrows) {
     EXPECT_EQ(acc.GetBalance(), 1100);
 }
 
-//Проверяем, что повторный Lock вызывает исключение
-
 TEST(AccountTest, RepeatedLockThrows) {
     Account acc(0, 1000);
 
     acc.Lock();
-    EXPECT_THROW(acc.Lock(), std::runtime_error);  // Повторный Lock — исключение
+    EXPECT_THROW(acc.Lock(), std::runtime_error);  
 }
 
-//Тесты для Transaction
-
-//Проверяем конструктор и fee по умолчанию
+// Тесты для Transaction 
 
 TEST(TransactionTest, ConstructorAndFee) {
     Transaction tx;
@@ -82,8 +71,7 @@ TEST(TransactionTest, ConstructorAndFee) {
     EXPECT_EQ(tx.fee(), 32);
 }
 
-//Успешный перевод: проверяются: Балансы до и после, Вызов SaveToDataBase
-
+// Успешный перевод: проверяются балансы до и после
 TEST(TransactionTest, SuccessfulTransfer) {
     Account from(0, 6132);
     Account to(1, 2133);
@@ -94,11 +82,12 @@ TEST(TransactionTest, SuccessfulTransfer) {
     bool result = tx.Make(from, to, 100);
     EXPECT_TRUE(result);
 
-    EXPECT_EQ(from.GetBalance(), 6132 - (100 + 32));  // Отправитель теряет сумму + комиссия
-    EXPECT_EQ(to.GetBalance(), 2133 + 100);           // Получатель получает сумму
+    // ИСПРАВЛЕНО: комиссия списывается с отправителя
+    EXPECT_EQ(from.GetBalance(), 6132 - (100 + 32));  
+    EXPECT_EQ(to.GetBalance(), 2133 + 100);         
 }
 
-//Тест на некорректные входные данные
+// Тест на некорректные входные данные
 TEST(TransactionTest, InvalidTransfers) {
     Transaction tx;
     tx.set_fee(51);
@@ -121,5 +110,5 @@ TEST(TransactionTest, InvalidTransfers) {
 
     // Недостаточно средств
     tx.set_fee(10);
-    EXPECT_FALSE(tx.Make(poor, rich, 100));
+    EXPECT_FALSE(tx.Make(poor, rich, 100));  
 }
