@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build_Linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clone GoogleTest
+        run: |
+          mkdir -p third-party
+          git clone --depth 1 https://github.com/google/googletest.git  third-party/gtest
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ lcov libgtest-dev
+
+      - name: Build GoogleTest
+        run: |
+          cd third-party/gtest
+          cmake .
+          make
+
+      - name: Configure project
+        run: |
+          mkdir -p _build && cd _build
+          cmake .. -DCMAKE_CXX_FLAGS="--coverage" -DGTEST_ROOT=third-party/gtest
+
+      - name: Build tests
+        run: |
+          cd _build
+          make
+
+      - name: Run tests
+        run: |
+          cd _build
+          ./my_test
+
+      - name: Generate lcov coverage report
+        run: |
+          mkdir -p coverage
+          cd _build
+          lcov --capture --directory . --output-file ../coverage/lcov.info --no-external
+          lcov --remove ../coverage/lcov.info '*/usr/*' --output-file ../coverage/lcov.cleaned.info
+
+      - name: Send coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ github.workspace }}/coverage/lcov.cleaned.info
