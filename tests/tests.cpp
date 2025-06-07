@@ -71,7 +71,6 @@ TEST(TransactionTest, ConstructorAndFee) {
     EXPECT_EQ(tx.fee(), 32);
 }
 
-// Успешный перевод: проверяются балансы до и после
 TEST(TransactionTest, SuccessfulTransfer) {
     Account from(0, 6132);
     Account to(1, 2133);
@@ -82,12 +81,11 @@ TEST(TransactionTest, SuccessfulTransfer) {
     bool result = tx.Make(from, to, 100);
     EXPECT_TRUE(result);
 
-    // ИСПРАВЛЕНО: комиссия списывается с отправителя
-    EXPECT_EQ(from.GetBalance(), 6132 - (100 + 32));  
-    EXPECT_EQ(to.GetBalance(), 2133 + 100);         
+    // Проверяем корректность списания и зачисления
+    EXPECT_EQ(from.GetBalance(), 6000);  // 6132 - 100 (перевод) - 32 (комиссия)
+    EXPECT_EQ(to.GetBalance(), 2233);    // 2133 + 100 (перевод)
 }
 
-// Тест на некорректные входные данные
 TEST(TransactionTest, InvalidTransfers) {
     Transaction tx;
     tx.set_fee(51);
@@ -102,13 +100,26 @@ TEST(TransactionTest, InvalidTransfers) {
     // Отрицательная сумма
     EXPECT_THROW(tx.Make(rich, poor, -100), std::invalid_argument);
 
-    // Слишком маленькая сумма
+    // Слишком маленькая сумма (<100)
     EXPECT_THROW(tx.Make(rich, poor, 50), std::logic_error);
 
-    // Комиссия больше суммы
+    // Комиссия больше суммы перевода (51 > 100/2)
     EXPECT_FALSE(tx.Make(rich, poor, 100));
 
-    // Недостаточно средств
+    // Недостаточно средств (10 < 100 + 10)
     tx.set_fee(10);
-    EXPECT_FALSE(tx.Make(poor, rich, 100));  
+    EXPECT_FALSE(tx.Make(poor, rich, 100));
+}
+
+TEST(TransactionTest, EdgeCaseTransfer) {
+    Account from(0, 110);
+    Account to(1, 0);
+
+    Transaction tx;
+    tx.set_fee(10);
+
+    // Перевод всей суммы (110 - 100 - 10 = 0)
+    EXPECT_TRUE(tx.Make(from, to, 100));
+    EXPECT_EQ(from.GetBalance(), 0);
+    EXPECT_EQ(to.GetBalance(), 100);
 }
