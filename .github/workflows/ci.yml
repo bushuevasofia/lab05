@@ -1,54 +1,41 @@
 name: CI
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+ push:
+  branches: [master]
+ pull_request:
+  branches: [master]
 
-jobs:
-  build_Linux:
-    runs-on: ubuntu-latest
+jobs: 
+ build_Linux:
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  runs-on: ubuntu-latest
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake g++ lcov libgtest-dev python3-pip
-          pip install python-coveralls
+  steps:
+  - uses: actions/checkout@v4
 
-      - name: Clone GoogleTest
-        run: |
-          mkdir -p third-party
-          git clone --depth 1 https://github.com/google/googletest.git  third-party/gtest
+  - name: putting gtest
+    run: git clone https://github.com/google/googletest.git third-party/gtest
+    
 
-      - name: Configure project
-        run: |
-          mkdir -p _build && cd _build
-          cmake .. -DCMAKE_CXX_FLAGS="--coverage" -DGTEST_ROOT=third-party/gtest
+  - name: Install lcov
+    run: sudo apt-get install -y lcov 
+  
+  - name: Configurate
+    run: |
+      rm -rf ${{github.workspace}}/_build
+      mkdir _build && cd _build
+      cmake .. -DBUILD_TESTS=ON -DCMAKE_CXX_FLAGS='--coverage'
+      cmake --build .
 
-      - name: Build tests
-        run: |
-          cd _build
-          make
-
-      - name: Run tests
-        run: |
-          cd _build
-          ./my_test
-
-      - name: Generate lcov coverage report
-        run: |
-          mkdir -p coverage
-          cd _build
-          lcov --capture --directory . --output-file ../coverage/lcov.info --no-external --ignore-errors empty
-          lcov --remove ../coverage/lcov.info '*/usr/*' 'third-party/*' --output-file ../coverage/lcov.cleaned.info
-
-      - name: Send coverage to Coveralls
-        uses: coverallsapp/github-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ github.workspace }}/coverage/lcov.cleaned.info
+  - name: Run tests
+    run: _build/my_test
+      
+  - name: lcov
+    run: lcov -c -d _build/CMakeFiles/banking.dir/banking/ --include *.cpp --output-file ./coverage/lcov.info
+  
+  - name: Coveralls
+    uses: coverallsapp/github-action@v2
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }} 
+      path-to-lcov: ${{ github.workspace }}/coverage/lcov.info
